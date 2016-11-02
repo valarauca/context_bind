@@ -1,7 +1,0 @@
-[package]
-name = "example"
-version = "0.1.0"
-authors = ["William Cody Laeder <codylaeder@gmail.com>"]
-
-[dependencies]
-context_bind = { path = ".." }

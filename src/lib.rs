@@ -7,6 +7,8 @@
 //!wrapping to make creating/and interacing easier.
 //!
 //!
+#[macro_use]
+extern crate lazy_static;
 extern crate context;
 use context::stack::{ProtectedFixedSizeStack, StackError};
 use context::context::Context;
@@ -74,15 +76,23 @@ pub fn new_stack(s: StackSize) -> Result<SafeStack,usize> {
 
 //Used in the return to parent method
 thread_local! {
-    pub static THREADHANDLE: RefCell<(Transfer,FN)>
-        = RefCell::new(unsafe{ mem::zeroed() });
+    pub static THREADHANDLE: RefCell<(Transfer,Option<FN>)>
+        = RefCell::new( (unsafe{mem::zeroed()},None) );
 }
 
 ///Returns a thread _handle_ It is called inside the function that sets up
 ///the call frame for a lambda.The main job is to give the co-routines a mutable
 ///reference to their threadhandle
 #[inline(always)]
-fn thread_handle<'a>() -> &'a mut (Transfer,FN) {
+fn thread_handle<'a>() -> &'a mut (Transfer,Option<FN>) {
+    /*
+    unsafe{
+        match HANDLE.as_ptr().as_mut() {
+            Option::None => panic!("Are you in a co-routined?"),
+            Option::Some(x) => x,
+        }
+    }
+    */
     THREADHANDLE.with( |cell| {
         unsafe{ match cell.as_ptr().as_mut() {
             Option::None => panic!("Are you in a co-routine?"),
@@ -99,7 +109,12 @@ fn thread_handle<'a>() -> &'a mut (Transfer,FN) {
 extern "C" fn build_stack(t: Transfer) -> ! {
     let mut local_handle = thread_handle();
     local_handle.0 = t;
-    (local_handle.1)();
+    match local_handle.1 {
+        Option::None => panic!("Are you in a co-routine?"),
+        Option::Some(ref x) => {
+            (x)();
+        }
+    };
     swap(EXIT);
     panic!("Something horrible happened!");
 }
@@ -116,7 +131,7 @@ extern "C" fn build_stack(t: Transfer) -> ! {
 ///Then execution will resume in the co-routine.
 #[inline(always)]
 pub fn swap(data: usize) -> usize {
-    type ORG = (Transfer,FN);
+    type ORG = (Transfer,Option<FN>);
     type ITEM = *mut ORG;
     unsafe{
         let ptr = thread_handle();
@@ -140,7 +155,7 @@ pub struct Routine {
     pub init: bool,
     pub id: RoutineID,
     pub state: Status,
-    lambda: FN,
+    lambda: Option<FN>,
     stack: SafeStack,
     context: Transfer
 }
@@ -165,7 +180,7 @@ impl Routine {
             init: false,
             id: id,
             state: Status::Ready,
-            lambda: b,
+            lambda: Some(b),
             stack: stack,
             context: t
         })
