@@ -1,5 +1,13 @@
 extern crate context_bind;
-use context_bind::{StackSize,Routine,swap};
+use context_bind::{StackSize,Routine,swap, Transfer};
+use std::cell::RefCell;
+use std::mem;
+use std::thread;
+
+thread_local!{
+    static THREADHANDLE: RefCell<(Transfer,Box<Fn()>)>
+        = RefCell::new( unsafe{ mem::zeroed() });
+}
 
 fn main() {
 

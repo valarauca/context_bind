@@ -9,7 +9,8 @@
 //!
 extern crate context;
 use context::stack::{ProtectedFixedSizeStack, StackError};
-use context::context::{Context,Transfer};
+use context::context::Context;
+pub use context::context::Transfer;
 #[allow(unused_imports)]
 use std::thread;
 use std::cell::RefCell;
