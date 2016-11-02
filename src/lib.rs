@@ -4,15 +4,38 @@
 //!co-routine library easier on myself. 
 //!
 //!The only stack this may returned is a ProtectedFixedSizedStack. It provides
-//!wrapping to make creating/and interacing easier.
+//!wrapping to make creating/and interacing easier. This also means stack
+//!overflows are checked.
 //!
+//!      context::{StackSize,Routine,swap};
+//!      let lambda = Box::new(||{
+//!         for i in 0usize.. {
+//!             swap(i*2);
+//!         }
+//!      });
+//!      let lambda2 = Box::new(||{
+//!         for i in 0usize.. {
+//!             swap(i*4);
+//!         }
+//!      });
+//!      let mut dut0 = Routine::new(lambda,1,StackSize::KiB8).unwrap();
+//!      let mut dut1 = Routine::new(lambda2,2,StackSize::KiB8).unwrap();
+//!      for x in 0..10 {
+//!         let a = dut0.exec(0);
+//!         let b = dut1.exec(0);
+//!         assert_eq!(a,x*2);
+//!         assert_eq!(b,x*4);
+//!      }
 //!
-#[macro_use]
-extern crate lazy_static;
+//!The presented interface is very small. In simplest terms the value passed
+//!to `exec` will be returned by `swap` and the value passed to `swap` will be
+//!returned by `exec`. 
+//!
+//!`swap` will panic if it called outside of a coroutine.
+//!
 extern crate context;
 use context::stack::{ProtectedFixedSizeStack, StackError};
-use context::context::Context;
-pub use context::context::Transfer;
+use context::context::{Context,Transfer};
 #[allow(unused_imports)]
 use std::thread;
 use std::cell::RefCell;
@@ -33,7 +56,9 @@ pub type RoutineID = usize;
 ///Define the size of a stack
 ///
 ///The default stack size on most systems is 8MiB. Generally speaking you will
-///lose the _light weight_ feel of M:N threading as you approach 8MiB.
+///lose the _light weight_ feel of M:N threading as you approach 8MiB. Smaller
+///threads are _better_ but too small and you risk a lot of crashing programs
+///to stack overflows.
 #[derive(Copy,Clone,Debug)]
 pub enum StackSize {
     KiB4 = KILOBIT*4,
@@ -50,22 +75,22 @@ pub enum StackSize {
     MiB8 = KILOBIT*KILOBIT*8,
 }
 
-///The status of a co-routine
+///The status of a co-routine. Not getting super in depth here.
 #[derive(Copy,Clone,Debug)]
 pub enum Status {
     Ready,
     Blocked
 }
 
-///Return a new stack.
-///
-///This function allocates a new protected fixed sized stack. If it returns
-///a ERR that means your process has a smaller stack then you've attempted
-///to allocate. 
-///
-///Err will contain the maximum stack sized for your system.
+//Return a new stack.
+//
+//This function allocates a new protected fixed sized stack. If it returns
+//a ERR that means your process has a smaller stack then you've attempted
+//to allocate. 
+//
+//Err will contain the maximum stack sized for your system.
 #[inline(always)]
-pub fn new_stack(s: StackSize) -> Result<SafeStack,usize> {
+fn new_stack(s: StackSize) -> Result<SafeStack,usize> {
     match ProtectedFixedSizeStack::new( s as usize ) {
         Ok(x) => Ok(x),
         //this is impossible if you reach the source code
@@ -76,23 +101,15 @@ pub fn new_stack(s: StackSize) -> Result<SafeStack,usize> {
 
 //Used in the return to parent method
 thread_local! {
-    pub static THREADHANDLE: RefCell<(Transfer,Option<FN>)>
-        = RefCell::new( (unsafe{mem::zeroed()},None) );
+    pub static THREADHANDLE: RefCell<(Option<Transfer>,Option<FN>)>
+        = RefCell::new( (None,None) );
 }
 
-///Returns a thread _handle_ It is called inside the function that sets up
-///the call frame for a lambda.The main job is to give the co-routines a mutable
-///reference to their threadhandle
+//Returns a thread _handle_ It is called inside the function that sets up
+//the call frame for a lambda.The main job is to give the co-routines a mutable
+//reference to their threadhandle
 #[inline(always)]
-fn thread_handle<'a>() -> &'a mut (Transfer,Option<FN>) {
-    /*
-    unsafe{
-        match HANDLE.as_ptr().as_mut() {
-            Option::None => panic!("Are you in a co-routined?"),
-            Option::Some(x) => x,
-        }
-    }
-    */
+fn thread_handle<'a>() -> &'a mut (Option<Transfer>,Option<FN>) {
     THREADHANDLE.with( |cell| {
         unsafe{ match cell.as_ptr().as_mut() {
             Option::None => panic!("Are you in a co-routine?"),
@@ -108,7 +125,7 @@ fn thread_handle<'a>() -> &'a mut (Transfer,Option<FN>) {
 //holds on its stack a mutable reference to that value.
 extern "C" fn build_stack(t: Transfer) -> ! {
     let mut local_handle = thread_handle();
-    local_handle.0 = t;
+    local_handle.0 = Some(t);
     match local_handle.1 {
         Option::None => panic!("Are you in a co-routine?"),
         Option::Some(ref x) => {
@@ -119,36 +136,40 @@ extern "C" fn build_stack(t: Transfer) -> ! {
     panic!("Something horrible happened!");
 }
 
+///Leave Co-Routine.
+///
 ///This function serves as both entry and exit point for a co-routine.
 ///So the function it performs is two fold
 ///
-///WHEN A CO-ROUTINE ENTERS: It will acquire a thread local handle
-///destructively read this handle and call RESUME. This will teleport
-///execution back to where the parent called RESUME on the child. 
-///
-///WHEN A CO-ROUTINE EXITS: This means the parent has called resume. The
-///new version of the TRANSER object must be assigned to the local handle.
-///Then execution will resume in the co-routine.
+///This function does a boat load of unsafe things internally to manage the
+///local thread state and swap contexts.
 #[inline(always)]
 pub fn swap(data: usize) -> usize {
-    type ORG = (Transfer,Option<FN>);
+    type ORG = (Option<Transfer>,Option<FN>);
     type ITEM = *mut ORG;
     unsafe{
         let ptr = thread_handle();
         let val: usize = mem::transmute(ptr);
         let ptr0: *const ORG = mem::transmute(val.clone());
         let ptr1: *mut ORG = mem::transmute(val.clone());
-        let (t,_) = read_ptr(ptr0);
-        let t_new = t.context.resume(data);
-        let rv: usize = t_new.data;
-        let x: ORG = (t_new,mem::zeroed());
-        write_ptr(ptr1, x);
-        return rv;
+        if let (Some(t),_) = read_ptr(ptr0) {
+            let t_new = t.context.resume(data);
+            let rv: usize = t_new.data;
+            let t_new = Some(t_new);
+            let x: ORG = (t_new,None);
+            write_ptr(ptr1, x);
+            return rv;
+        } else {
+            panic!("Transfer does not exist!!");
+        }
     }
 }
 
 
-///Encapsulates the state of a Coroutine
+///Encapsulate the state of a co-routine
+///
+///This holds the entire state of a co-routine. Some fields are public to
+///allow for eaiser inspection.
 #[allow(dead_code)]
 pub struct Routine {
     pub data: usize,
@@ -157,16 +178,19 @@ pub struct Routine {
     pub state: Status,
     lambda: Option<FN>,
     stack: SafeStack,
-    context: Transfer
+    context: Option<Transfer>
 }
 impl Routine {
 
-    ///build a new routine. If ou call this in a routine horrible things will
-    ///happen.
+    ///Build a new routine. 
+    ///
+    ///If you call this in a routine horrible things will
+    ///happen. Your new routine will panic on entry, and the old routine will 
+    ///panic on exit. 
     ///
     ///This function will return an error if the stack created is too large.
-    ///The maximums stack size your process may allocate will be listed in
-    ///that field.
+    ///The maximum stack size your process may allocate will be listed in
+    ///the `Err` field if that occurs.
     pub fn new(b: FN, id: RoutineID, stack: StackSize)
     -> Result<Routine,usize>
     {
@@ -182,10 +206,10 @@ impl Routine {
             state: Status::Ready,
             lambda: Some(b),
             stack: stack,
-            context: t
+            context: Some(t)
         })
     }
-    ///Used to set up the environment that lambda will execute in
+    
     #[inline(always)]
     fn init_run(&mut self, data: usize) -> usize {
         let mut ptr = thread_handle();
@@ -194,16 +218,21 @@ impl Routine {
         self.run_item(data)
     }
 
-    ///normal run
     #[inline(always)]
     fn run_item(&mut self, data: usize) -> usize {
-        let mut z: Transfer = unsafe{ mem::zeroed() };
-        mem::swap(&mut z, &mut self.context);
-        self.context = z.context.resume(data);
-        self.context.data
+        if let Some(t) = mem::replace( &mut self.context, None){
+            let context = t.context.resume(data);
+            let data = context.data;
+            self.context = Some(context);
+            return data;
+        } else {
+            panic!("Routine has no child to resume too");
+        }
     }
 
-    ///execute
+    ///Run the Routine.
+    ///
+    ///This behaves identical to swap, except it is attached to an object.
     pub fn exec(&mut self, data: usize) -> usize {
         if self.init {
             self.run_item(data)
@@ -214,7 +243,7 @@ impl Routine {
 }
         
 #[test]
-fn test_all_this_stuff() {
+fn test_single() {
     let lambda: FN = Box::new(||{
         for i in 0usize.. {
             print!("Yielding {:?} => ", i);
@@ -234,3 +263,24 @@ fn test_all_this_stuff() {
     println!("Finished!");
 }
 
+#[test]
+fn test_multiple() {
+    let lambda = Box::new(||{
+        for i in 0usize.. {
+            swap(i*2);
+        }
+    });
+    let lambda2 = Box::new(||{
+        for i in 0usize.. {
+            swap(i*4);
+        }
+    });
+    let mut dut0 = Routine::new(lambda,1,StackSize::KiB8).unwrap();
+    let mut dut1 = Routine::new(lambda2,2,StackSize::KiB8).unwrap();
+    for x in 0..10 {
+        let a = dut0.exec(0);
+        let b = dut1.exec(0);
+        assert_eq!(a,x*2);
+        assert_eq!(b,x*4);
+    }
+}
