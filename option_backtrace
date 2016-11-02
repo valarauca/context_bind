@@ -1,0 +1,71 @@
+
+running 1 test
+test test_all_this_stuff ... FAILED
+
+failures:
+
+---- test_all_this_stuff stdout ----
+	Resuming => thread 'test_all_this_stuff' panicked at 'called `Option::unwrap()` on a `None` value', ../src/libcore/option.rs:323
+stack backtrace:
+   1:     0x55bedc414e78 - std::sys::backtrace::tracing::imp::write::hfe165e8453813187
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/sys/unix/backtrace/tracing/gcc_s.rs:42
+   2:     0x55bedc41913f - std::panicking::default_hook::{{closure}}::h575f1b40d2e88f07
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:247
+   3:     0x55bedc417ed5 - std::panicking::default_hook::h3d5dccce8125d0cf
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:257
+   4:     0x55bedc4185e7 - std::panicking::rust_panic_with_hook::h00b81bb3dcbd51f2
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:451
+   5:     0x55bedc418474 - std::panicking::begin_panic::ha6a0d553db9869ff
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:413
+   6:     0x55bedc418399 - std::panicking::begin_panic_fmt::h24d113aee3ee4081
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:397
+   7:     0x55bedc418327 - rust_begin_unwind
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:373
+   8:     0x55bedc45252d - core::panicking::panic_fmt::he441b2ea2036b98a
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libcore/panicking.rs:69
+   9:     0x55bedc452464 - core::panicking::panic::haf296e94ad32f436
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libcore/panicking.rs:49
+  10:     0x55bedc3d6e66 - <core::option::Option<T>>::unwrap::h36623a71ae81a07b
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libcore/macros.rs:21
+  11:     0x55bedc3d721c - <std::thread::local::LocalKey<T>>::init::h98667e4f9006e599
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/thread/local.rs:272
+  12:     0x55bedc3d7334 - <std::thread::local::LocalKey<T>>::with::h6647070c9f944449
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/thread/local.rs:247
+  13:     0x55bedc3d943a - context_bind::Routine::exec::h72ae35cd2cc6a41a
+                        at /root/Documents/rust_projects/context_bind/src/lib.rs:96
+                        at /root/Documents/rust_projects/context_bind/src/lib.rs:191
+                        at /root/Documents/rust_projects/context_bind/src/lib.rs:211
+  14:     0x55bedc3d9951 - context_bind::test_all_this_stuff::h2cede1f8480ba5ec
+                        at /root/Documents/rust_projects/context_bind/src/lib.rs:230
+  15:     0x55bedc3e759e - <F as test::FnBox<T>>::call_box::h139af31b37861296
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libtest/lib.rs:1265
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libtest/lib.rs:141
+  16:     0x55bedc420c1a - __rust_maybe_catch_panic
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libpanic_unwind/lib.rs:97
+  17:     0x55bedc3dc89a - std::panicking::try::do_call::he0c0a6db23f4cacc
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:332
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panic.rs:351
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libtest/lib.rs:1210
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panic.rs:295
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:356
+  18:     0x55bedc420c1a - __rust_maybe_catch_panic
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libpanic_unwind/lib.rs:97
+  19:     0x55bedc3e2b32 - <F as alloc::boxed::FnBox<A>>::call_box::hd0908040f09af183
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panicking.rs:332
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/panic.rs:351
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/thread/mod.rs:278
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/liballoc/boxed.rs:595
+  20:     0x55bedc416d24 - std::sys::thread::Thread::new::thread_start::h9fa66f6812e81e10
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/liballoc/boxed.rs:605
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/sys/common/thread.rs:21
+                        at /buildslave/rust-buildbot/slave/nightly-dist-rustc-linux/build/obj/../src/libstd/sys/unix/thread.rs:84
+  21:     0x7f549f113709 - start_thread
+  22:     0x7f549ec3382c - clone
+  23:                0x0 - <unknown>
+
+
+failures:
+    test_all_this_stuff
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
+
