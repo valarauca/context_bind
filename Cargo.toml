@@ -7,7 +7,7 @@ homepage = "https://github.com/valarauca/context_bind"
 license = "Apache-2.0"
 readme = "README.md"
 documentation = "https://valarauca.github.io/context_bind/context_bind/index.html"
-description = "Simple M:N threading library"
+description = "Simple M:N threading library. Should support Linux, MacOS, Free/OpenBSD, and Windows for x86/64, and aarch32/64"
 keywords = ["green threading","coroutine", "green thread", "M:N"]
 
 [dependencies]
