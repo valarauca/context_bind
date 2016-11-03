@@ -31,7 +31,7 @@ that can be more easily embedded within external libraries (the goal is to make 
 
 ```
 
-To integrate use (this is broken atm)
+To integrate use the following in your `Cargo.toml` file.
 
 ```
 [dependencies]
