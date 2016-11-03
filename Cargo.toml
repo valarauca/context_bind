@@ -1,7 +1,14 @@
 [package]
 name = "context_bind"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["William Cody Laeder <codylaeder@gmail.com>"]
+repository = "https://github.com/valarauca/context_bind.git"
+homepage = "https://github.com/valarauca/context_bind"
+license = "Apache-2.0"
+readme = "README.md"
+documentation = "https://valarauca.github.io/context_bind/context_bind/index.html"
+description = "Simple M:N threading library"
+keywords = ["green threading","coroutine", "green thread", "M:N"]
 
 [dependencies]
 context = "1.0"
