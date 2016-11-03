@@ -18,35 +18,56 @@
 //!This is an intentional design decision to make the implementation of a
 //!co-routine library easier on myself. 
 //!
-//!The only stack this may returned is a ProtectedFixedSizedStack. It provides
-//!wrapping to make creating/and interacing easier. This also means stack
-//!overflows are checked.
+//!Every new routine generated will allocate generally twice. Once for the
+//!lambda (the developer will do this before calling `Routine:new`) and
+//!once internal to `Routine::new` to build the stack.
 //!
-//!      context::{StackSize,Routine,swap};
-//!      let lambda = Box::new(||{
-//!         for i in 0usize.. {
-//!             swap(i*2);
-//!         }
-//!      });
-//!      let lambda2 = Box::new(||{
-//!         for i in 0usize.. {
-//!             swap(i*4);
-//!         }
-//!      });
-//!      let mut dut0 = Routine::new(lambda,1,StackSize::KiB8).unwrap();
-//!      let mut dut1 = Routine::new(lambda2,2,StackSize::KiB8).unwrap();
-//!      for x in 0..10 {
-//!         let a = dut0.exec(0);
-//!         let b = dut1.exec(0);
-//!         assert_eq!(a,x*2);
-//!         assert_eq!(b,x*4);
-//!      }
+//!Stack overflows are checked.
+//!
+//!To integrate this crate into your project simply use
+//!```
+//![dependencies]
+//!context_bindings = "0.0.2"
+//!```
+//!
+//!Below is a simple example
+//!
+//!    use context_bind::{StackSize,Routine,swap};
+//!
+//!    let mut dut0 = Routine::new(StackSize::KiB8,move ||{
+//!        for i in 0usize.. {
+//!            swap(i*2);
+//!        }
+//!    }).unwrap();
+//!    let mut dut1 = Routine::new(StackSize::KiB8,move ||{
+//!        for i in 0usize.. {
+//!            swap(i*4);
+//!        }
+//!    }).unwrap();
+//!    for x in 0..10 {
+//!        let a = dut0.exec(0);
+//!        let b = dut1.exec(0);
+//!        assert_eq!(a,x*2);
+//!        assert_eq!(b,x*4);
+//!    }
 //!
 //!The presented interface is very small. In simplest terms the value passed
-//!to `exec` will be returned by `swap` and the value passed to `swap` will be
-//!returned by `exec`. 
+//!to `exec` will be injected, and returned by `swap`. The opposite is also
+//!true. The value give to `swap`, will be injected and returned by `exec`.
+//!
+//!The `exec` function will always resume _within_ the swap call, that yielded
+//!the co-routine context.
+//!
+//!There is more thread safety worth discussing. A routine maybe sent another
+//!thread once contructed (this is safe). A routine can be sent between threads
+//!while it is not running. But if you move a routine while it is running
+//!(you a dark unsafe wizard), bad things _may_ happen.
 //!
 //!`swap` will panic if it called outside of a coroutine.
+//!
+//!
+//!What is the difference between 0.0.1 and 0.0.2? I cleaned up the docs and
+//!public interfaces.
 //!
 extern crate context;
 use context::stack::{ProtectedFixedSizeStack, StackError};
@@ -61,19 +82,16 @@ const KILOBIT: isize = 1024;
 const EXIT: usize = ::std::usize::MAX;
 const START: usize = ::std::usize::MAX-1;
 
-///Wraps a type from the context library
-pub type SafeStack = ProtectedFixedSizeStack;
-///A stack allocatd Lambda
-pub type FN = Box<Fn()>;
-///The ID of a Routine
-pub type RoutineID = usize;
+type SafeStack = ProtectedFixedSizeStack;
+type FN = Box<Fn()>;
 
 ///Define the size of a stack
 ///
 ///The default stack size on most systems is 8MiB. Generally speaking you will
 ///lose the _light weight_ feel of M:N threading as you approach 8MiB. Smaller
-///threads are _better_ but too small and you risk a lot of crashing programs
+///threads are _better_ but too small and you risk crashing programs due
 ///to stack overflows.
+///
 #[derive(Copy,Clone,Debug)]
 pub enum StackSize {
     KiB4 = KILOBIT*4,
@@ -90,13 +108,7 @@ pub enum StackSize {
     MiB8 = KILOBIT*KILOBIT*8,
 }
 
-///The status of a co-routine. Not getting super in depth here.
-#[derive(Copy,Clone,Debug)]
-pub enum Status {
-    Ready,
-    Blocked
-}
-
+//
 //Return a new stack.
 //
 //This function allocates a new protected fixed sized stack. If it returns
@@ -116,7 +128,7 @@ fn new_stack(s: StackSize) -> Result<SafeStack,usize> {
 
 //Used in the return to parent method
 thread_local! {
-    pub static THREADHANDLE: RefCell<(Option<Transfer>,Option<FN>)>
+    static THREADHANDLE: RefCell<(Option<Transfer>,Option<FN>)>
         = RefCell::new( (None,None) );
 }
 
@@ -141,12 +153,11 @@ fn thread_handle<'a>() -> &'a mut (Option<Transfer>,Option<FN>) {
 extern "C" fn build_stack(t: Transfer) -> ! {
     let mut local_handle = thread_handle();
     local_handle.0 = Some(t);
-    match local_handle.1 {
-        Option::None => panic!("Are you in a co-routine?"),
-        Option::Some(ref x) => {
-            (x)();
-        }
-    };
+    if let Some(x) = mem::replace(&mut local_handle.1,None) {
+        (x)();
+    } else {
+        panic!("Could not locate function to build routine with.");
+    }
     swap(EXIT);
     panic!("Something horrible happened!");
 }
@@ -154,10 +165,29 @@ extern "C" fn build_stack(t: Transfer) -> ! {
 ///Leave Co-Routine.
 ///
 ///This function serves as both entry and exit point for a co-routine.
-///So the function it performs is two fold
 ///
-///This function does a boat load of unsafe things internally to manage the
-///local thread state and swap contexts.
+///    use context_bind::{Routine,StackSize,swap};
+///    let mut dut = match Routine::new(StackSize::KiB8, move|| {
+///                             //everything here
+///                             //is executed on first
+///                             //call
+///     for i in 0usize.. {
+///         swap(i);            //yield to parent
+///                             //swap call ends
+///                             //when parent calls
+///                             //exec
+///     }
+///    }){
+///        Ok(x) => x,
+///        Err(e) => panic!("\n\nCould not allocate stack.\n{:?}\n",e)
+///    };
+///    for x in 0..10 {
+///        let i = dut.exec(0); //run routine
+///                             //this function returns
+///                             //when routine calls `swap`
+///        assert_eq!(x,i);
+///    }
+///
 #[inline(always)]
 pub fn swap(data: usize) -> usize {
     type ORG = (Option<Transfer>,Option<FN>);
@@ -188,9 +218,7 @@ pub fn swap(data: usize) -> usize {
 #[allow(dead_code)]
 pub struct Routine {
     pub data: usize,
-    pub init: bool,
-    pub id: RoutineID,
-    pub state: Status,
+    init: bool,
     lambda: Option<FN>,
     stack: SafeStack,
     context: Option<Transfer>
@@ -199,15 +227,14 @@ impl Routine {
 
     ///Build a new routine. 
     ///
-    ///If you call this in a routine horrible things will
-    ///happen. Your new routine will panic on entry, and the old routine will 
-    ///panic on exit. 
-    ///
     ///This function will return an error if the stack created is too large.
     ///The maximum stack size your process may allocate will be listed in
     ///the `Err` field if that occurs.
-    pub fn new(b: FN, id: RoutineID, stack: StackSize)
+    ///
+    pub fn new<F>(stack: StackSize, b: F)
     -> Result<Routine,usize>
+    where
+        F: Fn()+'static
     {
         let stack = match new_stack(stack) {
             Err(e)=> return Err(e),
@@ -217,14 +244,32 @@ impl Routine {
         Ok(Routine {
             data: START,
             init: false,
-            id: id,
-            state: Status::Ready,
+            lambda: Some(Box::new(b)),
+            stack: stack,
+            context: Some(t)
+        })
+    }
+   
+    ///If you don't want to allocate internally at all
+    pub fn no_func_alloc<F>(stack: StackSize, b: Box<F>)
+    -> Result<Routine,usize>
+    where
+        F: Fn()+'static
+    {
+        let stack = match new_stack(stack) {
+            Err(e) => return Err(e),
+            Ok(x) => x,
+        };
+        let t = Transfer::new(Context::new(&stack,build_stack),START);
+        Ok(Routine {
+            data: START,
+            init: false,
             lambda: Some(b),
             stack: stack,
             context: Some(t)
         })
     }
-    
+
     #[inline(always)]
     fn init_run(&mut self, data: usize) -> usize {
         let mut ptr = thread_handle();
@@ -259,39 +304,32 @@ impl Routine {
         
 #[test]
 fn test_single() {
-    let lambda: FN = Box::new(||{
+    let mut dut = match Routine::new(StackSize::KiB8, move ||{
         for i in 0usize.. {
-            print!("Yielding {:?} => ", i);
             swap(i);
         }
-    });
-    let mut dut = match Routine::new(lambda,1,StackSize::KiB8) {
+    }){
         Ok(x) => x,
         Err(e) => panic!("\n\nCould not allocate stack.\n{:?}\n",e)
     };
     for x in 0..10 {
-        print!("Resuming => ");
         let i = dut.exec(0);
         assert_eq!(x,i);
-        println!("Got {:?}", i);
     }
-    println!("Finished!");
 }
 
 #[test]
 fn test_multiple() {
-    let lambda = Box::new(||{
+    let mut dut0 = Routine::new(StackSize::KiB8, move ||{
         for i in 0usize.. {
             swap(i*2);
         }
-    });
-    let lambda2 = Box::new(||{
+    }).unwrap();
+    let mut dut1 = Routine::new(StackSize::KiB8, move||{
         for i in 0usize.. {
             swap(i*4);
         }
-    });
-    let mut dut0 = Routine::new(lambda,1,StackSize::KiB8).unwrap();
-    let mut dut1 = Routine::new(lambda2,2,StackSize::KiB8).unwrap();
+    }).unwrap();
     for x in 0..10 {
         let a = dut0.exec(0);
         let b = dut1.exec(0);
