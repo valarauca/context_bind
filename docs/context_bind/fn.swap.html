@@ -47,14 +47,33 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-100' class='srclink' href='../src/context_bind/src/lib.rs.html#162-181' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-86' class='srclink' href='../src/context_bind/src/lib.rs.html#192-211' title='goto source code'>[src]</a></span></h1>
 <pre class='rust fn'>pub fn swap(data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></pre><div class='docblock'><p>Leave Co-Routine.</p>
 
-<p>This function serves as both entry and exit point for a co-routine.
-So the function it performs is two fold</p>
+<p>This function serves as both entry and exit point for a co-routine.</p>
 
-<p>This function does a boat load of unsafe things internally to manage the
-local thread state and swap contexts.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>context_bind</span>::{<span class='ident'>Routine</span>,<span class='ident'>StackSize</span>,<span class='ident'>swap</span>};
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>, <span class='kw'>move</span><span class='op'>||</span> {
+                         <span class='comment'>//everything here</span>
+                         <span class='comment'>//is executed on first</span>
+                         <span class='comment'>//call</span>
+ <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
+     <span class='ident'>swap</span>(<span class='ident'>i</span>);            <span class='comment'>//yield to parent</span>
+                         <span class='comment'>//swap call ends</span>
+                         <span class='comment'>//when parent calls</span>
+                         <span class='comment'>//exec</span>
+ }
+}){
+    <span class='prelude-val'>Ok</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span>,
+    <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;\n\nCould not allocate stack.\n{:?}\n&quot;</span>,<span class='ident'>e</span>)
+};
+<span class='kw'>for</span> <span class='ident'>x</span> <span class='kw'>in</span> <span class='number'>0</span>..<span class='number'>10</span> {
+    <span class='kw'>let</span> <span class='ident'>i</span> <span class='op'>=</span> <span class='ident'>dut</span>.<span class='ident'>exec</span>(<span class='number'>0</span>); <span class='comment'>//run routine</span>
+                         <span class='comment'>//this function returns</span>
+                         <span class='comment'>//when routine calls `swap`</span>
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>x</span>,<span class='ident'>i</span>);
+}</pre>
 </div></section>
     <section id='search' class="content hidden"></section>
 

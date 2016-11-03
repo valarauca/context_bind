@@ -47,32 +47,24 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-114' class='srclink' href='../src/context_bind/src/lib.rs.html#189-197' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-100' class='srclink' href='../src/context_bind/src/lib.rs.html#219-225' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Routine {
     pub data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>,
-    pub init: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>,
-    pub id: <a class='type' href='../context_bind/type.RoutineID.html' title='context_bind::RoutineID'>RoutineID</a>,
-    pub state: <a class='enum' href='../context_bind/enum.Status.html' title='context_bind::Status'>Status</a>,
     // some fields omitted
 }</pre><div class='docblock'><p>Encapsulate the state of a co-routine</p>
 
 <p>This holds the entire state of a co-routine. Some fields are public to
 allow for eaiser inspection.</p>
 </div><h2 class='fields'>Fields</h2><span id='structfield.data' class='structfield'><code>data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></code>
-                           </span><span class='stab '></span><span id='structfield.init' class='structfield'><code>init: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code>
-                           </span><span class='stab '></span><span id='structfield.id' class='structfield'><code>id: <a class='type' href='../context_bind/type.RoutineID.html' title='context_bind::RoutineID'>RoutineID</a></code>
-                           </span><span class='stab '></span><span id='structfield.state' class='structfield'><code>state: <a class='enum' href='../context_bind/enum.Status.html' title='context_bind::Status'>Status</a></code>
-                           </span><span class='stab '></span><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../context_bind/struct.Routine.html' title='context_bind::Routine'>Routine</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-122' class='srclink' href='../src/context_bind/src/lib.rs.html#198-258' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(b: <a class='type' href='../context_bind/type.FN.html' title='context_bind::FN'>FN</a>, id: <a class='type' href='../context_bind/type.RoutineID.html' title='context_bind::RoutineID'>RoutineID</a>, stack: <a class='enum' href='../context_bind/enum.StackSize.html' title='context_bind::StackSize'>StackSize</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../context_bind/struct.Routine.html' title='context_bind::Routine'>Routine</a>,&nbsp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt;</code></h4>
+                           </span><span class='stab '></span><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../context_bind/struct.Routine.html' title='context_bind::Routine'>Routine</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-106' class='srclink' href='../src/context_bind/src/lib.rs.html#226-303' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>&lt;F&gt;(stack: <a class='enum' href='../context_bind/enum.StackSize.html' title='context_bind::StackSize'>StackSize</a>, b: F) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../context_bind/struct.Routine.html' title='context_bind::Routine'>Routine</a>,&nbsp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt; <span class='where'>where F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>() + 'static</span></code></h4>
 <div class='docblock'><p>Build a new routine.</p>
-
-<p>If you call this in a routine horrible things will
-happen. Your new routine will panic on entry, and the old routine will 
-panic on exit. </p>
 
 <p>This function will return an error if the stack created is too large.
 The maximum stack size your process may allocate will be listed in
 the <code>Err</code> field if that occurs.</p>
+</div><h4 id='method.no_func_alloc' class='method'><code>fn <a href='#method.no_func_alloc' class='fnname'>no_func_alloc</a>&lt;F&gt;(stack: <a class='enum' href='../context_bind/enum.StackSize.html' title='context_bind::StackSize'>StackSize</a>, b: <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;F&gt;) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../context_bind/struct.Routine.html' title='context_bind::Routine'>Routine</a>,&nbsp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt; <span class='where'>where F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>() + 'static</span></code></h4>
+<div class='docblock'><p>If you don&#39;t want to allocate internally at all</p>
 </div><h4 id='method.exec' class='method'><code>fn <a href='#method.exec' class='fnname'>exec</a>(&amp;mut self, data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></code></h4>
 <div class='docblock'><p>Run the Routine.</p>
 

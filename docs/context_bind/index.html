@@ -47,42 +47,59 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/context_bind/src/lib.rs.html#16-301' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-0' class='srclink' href='../src/context_bind/src/lib.rs.html#16-339' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>This crate exists to be a shim between Context and a higher level library.
 The interface that it will present are generally not as safe as context.
 This is an intentional design decision to make the implementation of a
 co-routine library easier on myself. </p>
 
-<p>The only stack this may returned is a ProtectedFixedSizedStack. It provides
-wrapping to make creating/and interacing easier. This also means stack
-overflows are checked.</p>
+<p>Every new routine generated will allocate generally twice. Once for the
+lambda (the developer will do this before calling <code>Routine:new</code>) and
+once internal to <code>Routine::new</code> to build the stack.</p>
+
+<p>Stack overflows are checked.</p>
+
+<p>To integrate this crate into your project simply use
+<code>[dependencies] context_bindings = &quot;0.0.2&quot;</code></p>
+
+<p>Below is a simple example</p>
 
 <pre class='rust rust-example-rendered'>
-  <span class='ident'>context</span>::{<span class='ident'>StackSize</span>,<span class='ident'>Routine</span>,<span class='ident'>swap</span>};
-  <span class='kw'>let</span> <span class='ident'>lambda</span> <span class='op'>=</span> <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='op'>||</span>{
-     <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
-         <span class='ident'>swap</span>(<span class='ident'>i</span><span class='op'>*</span><span class='number'>2</span>);
-     }
-  });
-  <span class='kw'>let</span> <span class='ident'>lambda2</span> <span class='op'>=</span> <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='op'>||</span>{
-     <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
-         <span class='ident'>swap</span>(<span class='ident'>i</span><span class='op'>*</span><span class='number'>4</span>);
-     }
-  });
-  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut0</span> <span class='op'>=</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>lambda</span>,<span class='number'>1</span>,<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>).<span class='ident'>unwrap</span>();
-  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut1</span> <span class='op'>=</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>lambda2</span>,<span class='number'>2</span>,<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>).<span class='ident'>unwrap</span>();
-  <span class='kw'>for</span> <span class='ident'>x</span> <span class='kw'>in</span> <span class='number'>0</span>..<span class='number'>10</span> {
-     <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>dut0</span>.<span class='ident'>exec</span>(<span class='number'>0</span>);
-     <span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>dut1</span>.<span class='ident'>exec</span>(<span class='number'>0</span>);
-     <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>,<span class='ident'>x</span><span class='op'>*</span><span class='number'>2</span>);
-     <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>,<span class='ident'>x</span><span class='op'>*</span><span class='number'>4</span>);
-  }</pre>
+<span class='kw'>use</span> <span class='ident'>context_bind</span>::{<span class='ident'>StackSize</span>,<span class='ident'>Routine</span>,<span class='ident'>swap</span>};
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut0</span> <span class='op'>=</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>,<span class='kw'>move</span> <span class='op'>||</span>{
+    <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
+        <span class='ident'>swap</span>(<span class='ident'>i</span><span class='op'>*</span><span class='number'>2</span>);
+    }
+}).<span class='ident'>unwrap</span>();
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut1</span> <span class='op'>=</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>,<span class='kw'>move</span> <span class='op'>||</span>{
+    <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
+        <span class='ident'>swap</span>(<span class='ident'>i</span><span class='op'>*</span><span class='number'>4</span>);
+    }
+}).<span class='ident'>unwrap</span>();
+<span class='kw'>for</span> <span class='ident'>x</span> <span class='kw'>in</span> <span class='number'>0</span>..<span class='number'>10</span> {
+    <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>dut0</span>.<span class='ident'>exec</span>(<span class='number'>0</span>);
+    <span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>dut1</span>.<span class='ident'>exec</span>(<span class='number'>0</span>);
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>,<span class='ident'>x</span><span class='op'>*</span><span class='number'>2</span>);
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>,<span class='ident'>x</span><span class='op'>*</span><span class='number'>4</span>);
+}</pre>
 
 <p>The presented interface is very small. In simplest terms the value passed
-to <code>exec</code> will be returned by <code>swap</code> and the value passed to <code>swap</code> will be
-returned by <code>exec</code>. </p>
+to <code>exec</code> will be injected, and returned by <code>swap</code>. The opposite is also
+true. The value give to <code>swap</code>, will be injected and returned by <code>exec</code>.</p>
+
+<p>The <code>exec</code> function will always resume <em>within</em> the swap call, that yielded
+the co-routine context.</p>
+
+<p>There is more thread safety worth discussing. A routine maybe sent another
+thread once contructed (this is safe). A routine can be sent between threads
+while it is not running. But if you move a routine while it is running
+(you a dark unsafe wizard), bad things <em>may</em> happen.</p>
 
 <p><code>swap</code> will panic if it called outside of a coroutine.</p>
+
+<p>What is the difference between 0.0.1 and 0.0.2? I cleaned up the docs and
+public interfaces.</p>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
@@ -99,21 +116,6 @@ returned by <code>exec</code>. </p>
                            <td class='docblock short'>
                                 <p>Define the size of a stack</p>
                            </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.Status.html'
-                                  title='context_bind::Status'>Status</a></td>
-                           <td class='docblock short'>
-                                <p>The status of a co-routine. Not getting super in depth here.</p>
-                           </td>
-                       </tr></table><h2 id='statics' class='section-header'><a href="#statics">Statics</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class='static' href='static.THREADHANDLE.html'
-                                  title='context_bind::THREADHANDLE'>THREADHANDLE</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
                        </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
 <table>
                        <tr class=' module-item'>
@@ -121,28 +123,6 @@ returned by <code>exec</code>. </p>
                                   title='context_bind::swap'>swap</a></td>
                            <td class='docblock short'>
                                 <p>Leave Co-Routine.</p>
-                           </td>
-                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class='type' href='type.FN.html'
-                                  title='context_bind::FN'>FN</a></td>
-                           <td class='docblock short'>
-                                <p>A stack allocatd Lambda</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='type' href='type.RoutineID.html'
-                                  title='context_bind::RoutineID'>RoutineID</a></td>
-                           <td class='docblock short'>
-                                <p>The ID of a Routine</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='type' href='type.SafeStack.html'
-                                  title='context_bind::SafeStack'>SafeStack</a></td>
-                           <td class='docblock short'>
-                                <p>Wraps a type from the context library</p>
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>
