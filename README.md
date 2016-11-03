@@ -8,6 +8,8 @@ that can be more easily embedded within external libraries (the goal is to make 
 
 ```rust
 
+    use context_bind::{Routine,StackSize,swap};
+    
     let lambda = Box::new(||{
         for i in 0usize.. {
             swap(i*2);
@@ -36,3 +38,8 @@ To integrate use (this is broken atm)
 context_bindings = "0.0.1"
 ```
 
+A special thanks to the authors of [context-rs](https://github.com/zonyitoo/context-rs) without this library would not exist.
+
+[Y. T. CHUNG](https://github.com/zonyitoo)
+
+[Leonard Hecker](https://github.com/lhecker)
