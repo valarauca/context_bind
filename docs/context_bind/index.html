@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `context_bind` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, context_bind">
+
+    <title>context_bind - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'context_bind', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>context_bind</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-0' class='srclink' href='../src/context_bind/src/lib.rs.html#16-301' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>This crate exists to be a shim between Context and a higher level library.
+The interface that it will present are generally not as safe as context.
+This is an intentional design decision to make the implementation of a
+co-routine library easier on myself. </p>
+
+<p>The only stack this may returned is a ProtectedFixedSizedStack. It provides
+wrapping to make creating/and interacing easier. This also means stack
+overflows are checked.</p>
+
+<pre class='rust rust-example-rendered'>
+  <span class='ident'>context</span>::{<span class='ident'>StackSize</span>,<span class='ident'>Routine</span>,<span class='ident'>swap</span>};
+  <span class='kw'>let</span> <span class='ident'>lambda</span> <span class='op'>=</span> <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='op'>||</span>{
+     <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
+         <span class='ident'>swap</span>(<span class='ident'>i</span><span class='op'>*</span><span class='number'>2</span>);
+     }
+  });
+  <span class='kw'>let</span> <span class='ident'>lambda2</span> <span class='op'>=</span> <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='op'>||</span>{
+     <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0usize</span>.. {
+         <span class='ident'>swap</span>(<span class='ident'>i</span><span class='op'>*</span><span class='number'>4</span>);
+     }
+  });
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut0</span> <span class='op'>=</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>lambda</span>,<span class='number'>1</span>,<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>).<span class='ident'>unwrap</span>();
+  <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>dut1</span> <span class='op'>=</span> <span class='ident'>Routine</span>::<span class='ident'>new</span>(<span class='ident'>lambda2</span>,<span class='number'>2</span>,<span class='ident'>StackSize</span>::<span class='ident'>KiB8</span>).<span class='ident'>unwrap</span>();
+  <span class='kw'>for</span> <span class='ident'>x</span> <span class='kw'>in</span> <span class='number'>0</span>..<span class='number'>10</span> {
+     <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>dut0</span>.<span class='ident'>exec</span>(<span class='number'>0</span>);
+     <span class='kw'>let</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>dut1</span>.<span class='ident'>exec</span>(<span class='number'>0</span>);
+     <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>a</span>,<span class='ident'>x</span><span class='op'>*</span><span class='number'>2</span>);
+     <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>b</span>,<span class='ident'>x</span><span class='op'>*</span><span class='number'>4</span>);
+  }</pre>
+
+<p>The presented interface is very small. In simplest terms the value passed
+to <code>exec</code> will be returned by <code>swap</code> and the value passed to <code>swap</code> will be
+returned by <code>exec</code>. </p>
+
+<p><code>swap</code> will panic if it called outside of a coroutine.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.Routine.html'
+                                  title='context_bind::Routine'>Routine</a></td>
+                           <td class='docblock short'>
+                                <p>Encapsulate the state of a co-routine</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.StackSize.html'
+                                  title='context_bind::StackSize'>StackSize</a></td>
+                           <td class='docblock short'>
+                                <p>Define the size of a stack</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.Status.html'
+                                  title='context_bind::Status'>Status</a></td>
+                           <td class='docblock short'>
+                                <p>The status of a co-routine. Not getting super in depth here.</p>
+                           </td>
+                       </tr></table><h2 id='statics' class='section-header'><a href="#statics">Statics</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='static' href='static.THREADHANDLE.html'
+                                  title='context_bind::THREADHANDLE'>THREADHANDLE</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.swap.html'
+                                  title='context_bind::swap'>swap</a></td>
+                           <td class='docblock short'>
+                                <p>Leave Co-Routine.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.FN.html'
+                                  title='context_bind::FN'>FN</a></td>
+                           <td class='docblock short'>
+                                <p>A stack allocatd Lambda</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.RoutineID.html'
+                                  title='context_bind::RoutineID'>RoutineID</a></td>
+                           <td class='docblock short'>
+                                <p>The ID of a Routine</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.SafeStack.html'
+                                  title='context_bind::SafeStack'>SafeStack</a></td>
+                           <td class='docblock short'>
+                                <p>Wraps a type from the context library</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "context_bind";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script defer src="../search-index.js"></script>
+</body>
+</html>
