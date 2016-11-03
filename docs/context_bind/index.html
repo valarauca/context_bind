@@ -53,14 +53,14 @@ The interface that it will present are generally not as safe as context.
 This is an intentional design decision to make the implementation of a
 co-routine library easier on myself. </p>
 
-<p>Every new routine generated will allocate generally twice. Once for the
-lambda (the developer will do this before calling <code>Routine:new</code>) and
-once internal to <code>Routine::new</code> to build the stack.</p>
+<p>Every new routine generated will allocate twice. Once for the
+lambda (if the developer does this before calling <code>Routine::no_func_alloc</code> can be used) and
+again to build the stack.</p>
 
 <p>Stack overflows are checked.</p>
 
 <p>To integrate this crate into your project simply use
-<code>[dependencies]</br> context_bindings = &quot;0.0.2&quot;</code></p>
+    <code></br>[dependencies]</br> context_bindings = &quot;0.0.2&quot;</code></p>
 
 <p>Below is a simple example</p>
 
