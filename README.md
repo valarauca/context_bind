@@ -1,7 +1,9 @@
 # context_bind
 Binds I want out of context-rs
 
-[Documents](https://valarauca.github.io/context_bind/context_bind/index.html)
+[![Build Status](https://travis-ci.org/valarauca/context_bind.svg?branch=master)](https://travis-ci.org/valarauca/context_bind)
+
+[Docs](https://valarauca.github.io/context_bind/context_bind/index.html)
 
 These are simple bindings to context lib. The goal is to make a more object orriented runtime. With a free return function,
 that can be more easily embedded within external libraries (the goal is to make it easier to embed async-mio functionality).
