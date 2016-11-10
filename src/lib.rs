@@ -71,7 +71,7 @@
 //!public interfaces.
 //!
 extern crate context;
-use context::stack::{ProtectedFixedSizeStack, StackError};
+use context::stack::{ProtectedFixedSizeStack, StackError, Stack};
 use context::context::{Context,Transfer};
 #[allow(unused_imports)]
 use std::thread;
@@ -122,7 +122,7 @@ fn new_stack(s: StackSize) -> Result<SafeStack,usize> {
     match ProtectedFixedSizeStack::new( s as usize ) {
         Ok(x) => Ok(x),
         //this is impossible if you reach the source code
-        Err(StackError::IoError(e)) => panic!("\n\nSystem Error\n{:?}",e),
+        Err(StackError::IoError(e)) => unreachable!(),
         Err(StackError::ExceedsMaximumSize(x)) => Err(x)
     }
 }
@@ -140,7 +140,7 @@ thread_local! {
 fn thread_handle<'a>() -> &'a mut (Option<Transfer>,Option<FN>) {
     THREADHANDLE.with( |cell| {
         unsafe{ match cell.as_ptr().as_mut() {
-            Option::None => panic!("Are you in a co-routine?"),
+            Option::None => unreachable!(),
             Option::Some(x) => x
         }}
     })
@@ -157,7 +157,7 @@ extern "C" fn build_stack(t: Transfer) -> ! {
     if let Some(x) = mem::replace(&mut local_handle.1,None) {
         (x)();
     } else {
-        panic!("Could not locate function to build routine with.");
+        unreachable!();
     }
     swap(EXIT);
     panic!("Something horrible happened!");
@@ -287,7 +287,7 @@ impl Routine {
             self.context = Some(context);
             return data;
         } else {
-            panic!("Routine has no child to resume too");
+            unreachable!();
         }
     }
 
@@ -300,6 +300,33 @@ impl Routine {
         } else {
             self.init_run(START)
         }
+    }
+
+    ///Trade Context
+    ///
+    ///Changes the stack these functions will jump too. 
+    #[inline(always)]
+    pub fn trade_context(&mut self, other: &mut Routine ) {
+        //swap pointers
+        match (self.context, other.context) {
+            (Option::Some(ref mut s),Option::Some(ref mut o))=>{
+                mem::swap(s,o);
+            },
+            _ => unreachable!()
+        };
+        //swap stack ownership
+        mem::swap(&mut self.stack, &mut other.stack);
+        //swap start flag
+        mem::swap(&mut self.init, &mut other.init);
+        //swap lambda
+        match (self.lambda, other.lambda) {
+            (Option::Some(ref mut s),Option::Some(ref mut o))=>{
+                mem::swap(s,o);
+            },
+            _ => unreachable!()
+        };
+        //swap data
+        mem::swap(&mut self.data, &mut other.data);
     }
 }
         
